@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEGIS TECHNOLOGIES</title>
+    <link rel="icon" type="image/png" href="../assets/logo-aegis.jpg">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">AEGIS <span>Technologies</span></div>
+            <ul>
+                <li><a href="#">Solutions</a></li>
+                <li><a href="#">Secteur Défense</a></li>
+                <li><a href="#">Innovation</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <video autoplay muted loop playsinline class="hero-video">
+            <source src="assets/Hailuo_Video_Cinematic_Rafale.mp4" type="video/mp4">
+            Votre navigateur ne supporte pas la lecture de vidéos HTML5.
+        </video>
+
+        <div class="hero-content">
+            <h1>Sécuriser demain, aujourd'hui.</h1>
+            <p>Leader mondial des infrastructures de communication résilientes pour les forces armées et les secteurs critiques.</p>
+        </div>
+    </section>
+
+    <main id="about">
+        <section class="services-grid">
+            <div class="service-card" style="background-image: url('assets/service-uas.jpg');">
+                <div class="card-overlay">
+                    <h3>Systèmes Aériens Sans Pilote</h3>
+                    <p>Solutions UAS pour les applications militaires, gouvernementales et commerciales.</p>
+                </div>
+            </div>
+
+            <div class="service-card" style="background-image: url('assets/service-space.jpg');">
+                <div class="card-overlay">
+                    <h3>Espace Militaire</h3>
+                    <p>Fourniture de services de communication satellitaire militaire.</p>
+                </div>
+            </div>
+
+            <div class="service-card" style="background-image: url('assets/service-connectivity.jpg');">
+                <div class="card-overlay">
+                    <h3>Connectivité</h3>
+                    <p>Connecter les organisations de défense mondiales via des partenariats de confiance à long terme.</p>
+                </div>
+            </div>
+
+            <div class="service-card" style="background-image: url('assets/service-intelligence.jpg');">
+                <div class="card-overlay">
+                    <h3>Renseignement et Données</h3>
+                    <p>Fourniture d'informations meilleures pour prendre des décisions plus éclairées.</p>
+                </div>
+            </div>
+        </section>
+    
+        <section class="team-spotlight">
+            <h2>Notre Équipe</h2>
+            
+            <div class="slider-wrapper">
+                
+                <button class="slide-arrow" id="slide-arrow-prev">&#8249;</button>
+                
+                <div class="slider-container">
+                    <div class="expert-slider" id="expert-slider">
+                        <div class="expert-card">
+                            <img src="assets/pp-marc.jpg" alt="Marc Voland" class="expert-img">
+                            <p><strong>Marc VOLAND</strong><br>Directeur des Opérations (COO)</p>
+                        </div>
+
+                        <div class="expert-card">
+                            <img src="assets/pp-hina.jpg" alt="Hina Chen" class="expert-img">
+                            <p><strong>Hina CHEN</strong><br>Analyste Menaces (CTI)</p>
+                        </div>
+
+                        <div class="expert-card">
+                            <img src="assets/pp-lea.jpg" alt="Léa Sarti" class="expert-img">
+                            <p><strong>Léa SARTI</strong><br>Responsable Cybersécurité</p>
+                        </div>
+
+                        <div class="expert-card">
+                            <img src="assets/pp-yanis.jpg" alt="Yanis Bekker" class="expert-img">
+                            <p><strong>Yanis BEKKER</strong><br>Lead Developer</p>
+                        </div>
+                        
+                        <div class="expert-card">
+                            <img src="assets/pp-thomas.jpg" alt="Thomas Lalimace" class="expert-img">
+                            <p><strong>Thomas LALIMACE</strong><br>Ingénieur Réseaux Senior</p>
+                        </div>
+
+                        <div class="expert-card">
+                            <img src="assets/pp-sarah.jpg" alt="Sarah Connor" class="expert-img">
+                            <p><strong>Sarah CONNOR</strong><br>Architecte Infrastructure</p>
+                        </div>
+
+                        
+
+                        <div class="expert-card">
+                            <img src="assets/pp-amine.jpg" alt="Amine Belkacem" class="expert-img">
+                            <p><strong>Amine BELKACEM</strong><br>Expert Data & MySQL</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="slide-arrow" id="slide-arrow-next">&#8250;</button>
+
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>2026 AEGIS Technologies SA. Tous droits réservés.</p>
+            <ul class="footer-links">
+                <li><a href="#">Mentions Légales</a></li>
+                <li><a href="#">Politique de Confidentialité</a></li>
+                <li><a href="intranet/login.php" class="admin-link">Accès Collaborateur</a></li>
+            </ul>
+        </div>
+    </footer>
+
+    <script>
+        const slider = document.getElementById("expert-slider");
+        const prevButton = document.getElementById("slide-arrow-prev");
+        const nextButton = document.getElementById("slide-arrow-next");
+
+        nextButton.addEventListener("click", () => {
+            const slideWidth = slider.querySelector(".expert-card").clientWidth + 32; 
+            slider.scrollLeft += slideWidth;
+        });
+
+        prevButton.addEventListener("click", () => {
+            const slideWidth = slider.querySelector(".expert-card").clientWidth + 32;
+            slider.scrollLeft -= slideWidth;
+        });
+    </script>
+</body>
+</html>
