@@ -65,50 +65,78 @@ $tickets = $stmt_l->fetchAll();
 
         body {
             margin: 0;
-            display: flex;
-            height: 100vh;
             font-family: 'Segoe UI', Tahoma, sans-serif;
             background-color: #fff;
             color: var(--text-dark);
-            overflow: hidden;
         }
 
-        /* BARRE LATÉRALE */
-        .sidebar {
-            width: 260px;
+        /* BARRE DE NAVIGATION EN HAUT */
+        .navbar {
             background-color: var(--aegis-blue);
             color: white;
             display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            height: 70px;
         }
-        .sidebar-header {
-            padding: 30px 20px;
+        
+        .navbar-header {
             font-size: 1.4rem;
             font-weight: bold;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
             letter-spacing: 1px;
         }
-        .nav-links { list-style: none; padding: 0; margin: 20px 0; flex-grow: 1; }
+
+        .nav-container {
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        .nav-links { 
+            list-style: none; 
+            padding: 0; 
+            margin: 0; 
+            display: flex;
+            height: 100%;
+        }
+        
+        .nav-links li {
+            height: 100%;
+        }
+
         .nav-links li a {
-            display: block;
-            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            padding: 0 25px;
             color: rgba(255,255,255,0.7);
             text-decoration: none;
             transition: 0.3s;
+            height: 100%;
+            box-sizing: border-box;
         }
+        
         .nav-links li a:hover, .nav-links li a.active {
             background-color: var(--aegis-light-blue);
             color: white;
         }
 
+        .logout-section {
+            display: flex;
+            align-items: center;
+            padding-left: 25px;
+            border-left: 1px solid rgba(255,255,255,0.1);
+            height: 50%;
+        }
+
         /* CONTENU PRINCIPAL */
         .main-wrapper {
-            flex-grow: 1;
             display: flex;
             flex-direction: column;
+            height: calc(100vh - 70px);
+            overflow: hidden;
         }
+        
         .top-nav {
             padding: 15px 30px;
             border-bottom: 1px solid var(--border);
@@ -136,7 +164,7 @@ $tickets = $stmt_l->fetchAll();
 
         /* Panneau de droite : Formulaire */
         .panel-form {
-            width: 30%;
+            width: 40%;
             padding: 40px;
             overflow-y: auto;
         }
@@ -226,16 +254,20 @@ $tickets = $stmt_l->fetchAll();
 </head>
 <body>
 
-    <nav class="sidebar">
-        <div class="sidebar-header">AEGIS CORE</div>
-        <ul class="nav-links">
-            <li><a href="dashboard.php">Accueil</a></li>
-            <li><a href="tickets.php" class="active">Tickets</a></li>
-            <li><a href="documents.php">Documents</a></li>
-            <li><a href="notes.php">Notes</a></li>
-        </ul>
-        <div style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <a href="logout.php" style="color: #ff7b72; text-decoration: none; font-size: 0.9rem;">Déconnexion</a>
+    <nav class="navbar">
+        <div class="navbar-header">AEGIS CORE</div>
+        
+        <div class="nav-container">
+            <ul class="nav-links">
+                <li><a href="dashboard.php">Accueil</a></li>
+                <li><a href="tickets.php" class="active">Tickets</a></li>
+                <li><a href="documents.php">Documents</a></li>
+                <li><a href="notes.php">Notes</a></li>
+            </ul>
+            
+            <div class="logout-section">
+                <a href="logout.php" style="color: #ff7b72; text-decoration: none; font-size: 0.9rem; font-weight: bold;">Déconnexion</a>
+            </div>
         </div>
     </nav>
 
