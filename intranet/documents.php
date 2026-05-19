@@ -28,21 +28,29 @@ if ($is_restricted_user && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST[
 }
 
 // 4. Déterminer si l'accès doit être bloqué ou non
-// Bloqué SI c'est Thomas ET qu'il n'a pas encore validé le bon code dans sa session
 $access_blocked = $is_restricted_user && !isset($_SESSION['thomas_unlocked']);
 
-// 5. Récupération des documents en BDD
+// 5. FILTRE DE CONFIDENTIALITÉ : Récupération des documents en BDD
 if ($access_blocked) {
     $documents = []; // On ne charge rien si l'accès est bloqué
 } else {
-    // Si c'est l'admin (ID 1) ou un directeur, on affiche tout. Si c'est Thomas débloqué, on affiche ses docs.
+    // Si c'est l'admin (ID 1), il a une vue globale sur tous les documents
     if ($user_id == 1) {
-        $stmt_docs = $pdo->query("SELECT d.*, u.prenom, u.nom FROM documents d JOIN users u ON d.auteur_id = u.id ORDER BY d.date_depot DESC");
+        $stmt_docs = $pdo->query("SELECT d.*, u.prenom, u.nom 
+                                  FROM documents d 
+                                  JOIN users u ON d.auteur_id = u.id 
+                                  ORDER BY d.date_depot DESC");
+        $documents = $stmt_docs->fetchAll();
     } else {
-        $stmt_docs = $pdo->prepare("SELECT d.*, u.prenom, u.nom FROM documents d JOIN users u ON d.auteur_id = u.id WHERE d.auteur_id = ? ORDER BY d.date_depot DESC");
+        // Si c'est un collaborateur lambda (ou Thomas débloqué), il ne voit QUE ses propres documents
+        $stmt_docs = $pdo->prepare("SELECT d.*, u.prenom, u.nom 
+                                    FROM documents d 
+                                    JOIN users u ON d.auteur_id = u.id 
+                                    WHERE d.auteur_id = ? 
+                                    ORDER BY d.date_depot DESC");
         $stmt_docs->execute([$user_id]);
+        $documents = $stmt_docs->fetchAll();
     }
-    $documents = $stmt_docs->fetchAll();
 }
 ?>
 
@@ -52,24 +60,78 @@ if ($access_blocked) {
     <meta charset="UTF-8">
     <title>AEGIS CORE - Coffre-fort Documentaire</title>
     <style>
-        :root { --aegis-blue: #003366; --aegis-light-blue: #0056b3; --border: #e1e4e8; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f4f7f9; }
+        :root { 
+            --aegis-blue: #003366; 
+            --aegis-light-blue: #0056b3; 
+            --border: #e1e4e8; 
+            --bg-gray: #f4f7f9;
+        }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg-gray); }
         
-        /* Style Navbar identique à tes autres pages */
-        .navbar { background-color: var(--aegis-blue); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; height: 70px; }
-        .navbar a { color: rgba(255,255,255,0.7); text-decoration: none; padding: 0 20px; height: 100%; display: inline-flex; align-items: center; }
+        /* Barre de navigation globale */
+        .navbar { 
+            background-color: var(--aegis-blue); 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 0 30px; 
+            height: 70px; 
+        }
+        .navbar a { 
+            color: rgba(255,255,255,0.7); 
+            text-decoration: none; 
+            padding: 0 20px; 
+            height: 100%; 
+            display: inline-flex; 
+            align-items: center; 
+        }
         .navbar a.active, .navbar a:hover { background: var(--aegis-light-blue); color: white; }
 
         .container { padding: 40px; max-width: 1200px; margin: 0 auto; }
         
-        /* ÉCRAN ROUGE DE BLOCAGE */
-        .blocked-screen { background: #fff5f5; border: 2px solid #e53e3e; border-radius: 8px; padding: 40px; text-align: center; max-width: 600px; margin: 50px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        /* ÉCRAN ROUGE DE BLOCAGE (THOMAS) */
+        .blocked-screen { 
+            background: #fff5f5; 
+            border: 2px solid #e53e3e; 
+            border-radius: 8px; 
+            padding: 40px; 
+            text-align: center; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+        }
         .blocked-title { color: #c53030; font-size: 1.8rem; margin-top: 0; font-weight: bold; }
-        .code-input { padding: 12px; width: 80%; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 1.1rem; text-align: center; letter-spacing: 2px; font-family: monospace; }
-        .btn-unlock { background: #c53030; color: white; border: none; padding: 12px 30px; margin-top: 15px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .code-input { 
+            padding: 12px; 
+            width: 80%; 
+            border: 1px solid #cbd5e0; 
+            border-radius: 4px; 
+            font-size: 1.1rem; 
+            text-align: center; 
+            letter-spacing: 2px; 
+            font-family: monospace; 
+        }
+        .btn-unlock { 
+            background: #c53030; 
+            color: white; 
+            border: none; 
+            padding: 12px 30px; 
+            margin-top: 15px; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
         
         /* TABLEAU DES DOCUMENTS */
-        .doc-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .doc-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            background: white; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+        }
         .doc-table th, .doc-table td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border); }
         .doc-table th { background: #eaedf1; font-weight: 600; color: #4a5568; }
         .btn-download { color: var(--aegis-light-blue); text-decoration: none; font-weight: bold; }
@@ -78,7 +140,7 @@ if ($access_blocked) {
 <body>
 
     <nav class="navbar">
-        <div style="font-size: 1.4rem; font-weight: bold;">AEGIS CORE</div>
+        <div style="font-size: 1.4rem; font-weight: bold; letter-spacing: 1px;">AEGIS CORE</div>
         <div style="display:flex; height:100%;">
             <a href="dashboard.php">Accueil</a>
             <a href="tickets.php">Tickets</a>
@@ -113,7 +175,13 @@ if ($access_blocked) {
             </div>
 
         <?php else: ?>
-            <p>Liste des fichiers confidentiels associés à votre niveau d'accréditation :</p>
+            <p style="color: #555; margin-bottom: 20px;">
+                <?php if ($user_id == 1): ?>
+                    [Console Administrateur] Affichage global de l'intégralité du coffre-fort documentaire :
+                <?php else: ?>
+                    Liste des fichiers confidentiels téléversés par votre poste de travail :
+                <?php endif; ?>
+            </p>
             
             <?php if($success_msg): ?>
                 <div style="background: #dafbe1; color: #1e4620; padding:15px; border-radius:6px; margin-bottom:20px; font-size:0.9rem; font-weight:bold;"><?php echo $success_msg; ?></div>
@@ -140,7 +208,7 @@ if ($access_blocked) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="4" style="text-align:center; color:#999; font-style:italic;">Aucun document disponible dans ce répertoire.</td>
+                            <td colspan="4" style="text-align:center; color:#999; font-style:italic; padding: 30px;">Aucun document disponible dans votre répertoire personnel.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

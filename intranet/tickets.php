@@ -31,17 +31,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['create_ticket'])) {
     }
 }
 
-// --- LOGIQUE D'AJOUT DE MESSAGE (DANS UN TICKET EXISTANT) ---
+// --- LOGIQUE D'AJOUT DE MESSAGE DANS LA DISCUSSION ---
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['post_message'])) {
     $ticket_id = (int)$_POST['ticket_id'];
     $msg_text = trim($_POST['reply_message']);
 
-    if (!empty($msg_text)) {
+    // SÉCURITÉ : Thomas (ID 2) ne peut pas poster sur le ticket d'investigation 161, ni sur son ticket supprimé 160
+    if ($user_id == 2 && ($ticket_id == 161 || $ticket_id == 160)) {
+        $error_msg = "Action non autorisée sur un ticket archivé ou restreint.";
+    } elseif (!empty($msg_text)) {
         $sql_msg_ins = "INSERT INTO ticket_messages (ticket_id, auteur_id, message) VALUES (?, ?, ?)";
         $stmt_m_ins = $pdo->prepare($sql_msg_ins);
         
         if ($stmt_m_ins->execute([$ticket_id, $user_id, $msg_text])) {
-            // Optionnel : On peut changer le statut du ticket si nécessaire au moment de la réponse
             $success_msg = "Message ajouté au fil de discussion.";
         } else {
             $error_msg = "Impossible d'envoyer le message.";
@@ -49,15 +51,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['post_message'])) {
     }
 }
 
-// 2. Gestion des onglets (Filtre de vue de la liste)
+// 2. Gestion des onglets (Filtre de vue de la liste à gauche)
 $view = isset($_GET['view']) ? $_GET['view'] : 'assigned';
 
 if ($view === 'my_tickets') {
     $sql_list = "SELECT * FROM tickets WHERE auteur_id = ? ORDER BY date_creation DESC";
-    $view_title = "Mes demandes émises";
 } else {
     $sql_list = "SELECT * FROM tickets WHERE assigne_a = ? ORDER BY date_creation DESC";
-    $view_title = "Tickets à traiter";
 }
 
 $stmt_l = $pdo->prepare($sql_list);
@@ -67,25 +67,37 @@ $tickets = $stmt_l->fetchAll();
 // 3. RECUPERATION DU TICKET SÉLECTIONNÉ ET DE SES MESSAGES
 $selected_ticket = null;
 $messages = [];
+$is_forbidden_ticket = false;
 
 if (isset($_GET['ticket_id'])) {
     $ticket_id = (int)$_GET['ticket_id'];
     
-    // Récupérer les détails du ticket sélectionné
-    $stmt_t = $pdo->prepare("SELECT t.*, u.prenom as aut_prenom, u.nom as aut_nom FROM tickets t JOIN users u ON t.auteur_id = u.id WHERE t.id = ?");
-    $stmt_t->execute([$ticket_id]);
-    $selected_ticket = $stmt_t->fetch();
-    
-    if ($selected_ticket) {
-        // Récupérer le fil de discussion associé à ce ticket
-        $sql_msg = "SELECT m.*, u.prenom, u.nom, u.poste 
-                    FROM ticket_messages m 
-                    JOIN users u ON m.auteur_id = u.id 
-                    WHERE m.ticket_id = ? 
-                    ORDER BY m.date_envoi ASC";
-        $stmt_msg = $pdo->prepare($sql_msg);
-        $stmt_msg->execute([$ticket_id]);
-        $messages = $stmt_msg->fetchAll();
+    // SÉCURITÉ SCÉNARIO STRICTE : Si Thomas (ID 2) tente de forcer l'URL sur le ticket confidentiel 161
+    if ($user_id == 2 && $ticket_id == 161) {
+        $is_forbidden_ticket = true;
+    } else {
+        // Récupérer les détails du ticket sélectionné
+        $stmt_t = $pdo->prepare("SELECT t.*, u.prenom as aut_prenom, u.nom as aut_nom FROM tickets t JOIN users u ON t.auteur_id = u.id WHERE t.id = ?");
+        $stmt_t->execute([$ticket_id]);
+        $selected_ticket = $stmt_t->fetch();
+        
+        // Sécurité globale : Si le ticket n'appartient pas à l'utilisateur et ne lui est pas assigné, on lui cache (sauf si admin)
+        if ($selected_ticket && $user_id != 1 && $selected_ticket['auteur_id'] != $user_id && $selected_ticket['assigne_a'] != $user_id) {
+            $selected_ticket = null;
+            $is_forbidden_ticket = true;
+        }
+
+        if ($selected_ticket) {
+            // Récupérer le fil de discussion associé à ce ticket
+            $sql_msg = "SELECT m.*, u.prenom, u.nom, u.poste 
+                        FROM ticket_messages m 
+                        JOIN users u ON m.auteur_id = u.id 
+                        WHERE m.ticket_id = ? 
+                        ORDER BY m.date_envoi ASC";
+            $stmt_msg = $pdo->prepare($sql_msg);
+            $stmt_msg->execute([$ticket_id]);
+            $messages = $stmt_msg->fetchAll();
+        }
     }
 }
 ?>
@@ -104,161 +116,39 @@ if (isset($_GET['ticket_id'])) {
             --text-dark: #333;
         }
 
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            background-color: #fff;
-            color: var(--text-dark);
-        }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #fff; color: var(--text-dark); }
 
         /* BARRE DE NAVIGATION EN HAUT */
-        .navbar {
-            background-color: var(--aegis-blue);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 30px;
-            height: 70px;
-        }
-        
-        .navbar-header {
-            font-size: 1.4rem;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .nav-container {
-            display: flex;
-            align-items: center;
-            height: 100%;
-        }
-
-        .nav-links { 
-            list-style: none; 
-            padding: 0; 
-            margin: 0; 
-            display: flex;
-            height: 100%;
-        }
-        
-        .nav-links li {
-            height: 100%;
-        }
-
-        .nav-links li a {
-            display: flex;
-            align-items: center;
-            padding: 0 25px;
-            color: rgba(255,255,255,0.7);
-            text-decoration: none;
-            transition: 0.3s;
-            height: 100%;
-            box-sizing: border-box;
-        }
-        
-        .nav-links li a:hover, .nav-links li a.active {
-            background-color: var(--aegis-light-blue);
-            color: white;
-        }
-
-        .logout-section {
-            display: flex;
-            align-items: center;
-            padding-left: 25px;
-            border-left: 1px solid rgba(255,255,255,0.1);
-            height: 50%;
-        }
+        .navbar { background-color: var(--aegis-blue); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; height: 70px; }
+        .navbar-header { font-size: 1.4rem; font-weight: bold; letter-spacing: 1px; }
+        .nav-container { display: flex; align-items: center; height: 100%; }
+        .nav-links { list-style: none; padding: 0; margin: 0; display: flex; height: 100%; }
+        .nav-links li a { display: flex; align-items: center; padding: 0 25px; color: rgba(255,255,255,0.7); text-decoration: none; transition: 0.3s; height: 100%; box-sizing: border-box; }
+        .nav-links li a:hover, .nav-links li a.active { background-color: var(--aegis-light-blue); color: white; }
+        .logout-section { display: flex; align-items: center; padding-left: 25px; border-left: 1px solid rgba(255,255,255,0.1); height: 50%; }
 
         /* CONTENU PRINCIPAL */
-        .main-wrapper {
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 70px);
-            overflow: hidden;
-        }
-        
-        .top-nav {
-            padding: 15px 30px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #fff;
-        }
-
-        /* SPLIT VIEW (GAUCHE / DROITE) */
-        .split-view {
-            display: flex;
-            flex-grow: 1;
-            overflow: hidden;
-        }
+        .main-wrapper { display: flex; flex-direction: column; height: calc(100vh - 70px); overflow: hidden; }
+        .top-nav { padding: 15px 30px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .split-view { display: flex; flex-grow: 1; overflow: hidden; }
 
         /* Panneau de gauche : Liste */
-        .panel-list {
-            width: 45%;
-            background-color: var(--bg-gray);
-            border-right: 1px solid var(--border);
-            padding: 25px;
-            overflow-y: auto;
-        }
-
+        .panel-list { width: 45%; background-color: var(--bg-gray); border-right: 1px solid var(--border); padding: 25px; overflow-y: auto; }
         /* Panneau de droite : Formulaire ou Détails */
-        .panel-form {
-            width: 55%;
-            padding: 40px;
-            overflow-y: auto;
-        }
+        .panel-form { width: 55%; padding: 40px; overflow-y: auto; }
 
         /* ONGLETS (TABS) */
-        .tabs {
-            display: flex;
-            background: #e1e4e8;
-            padding: 4px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-        }
-        .tab-link {
-            flex: 1;
-            text-align: center;
-            padding: 8px;
-            text-decoration: none;
-            color: #586069;
-            font-size: 0.9rem;
-            font-weight: 600;
-            border-radius: 6px;
-            transition: 0.2s;
-        }
-        .tab-link.active {
-            background: white;
-            color: var(--aegis-blue);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+        .tabs { display: flex; background: #e1e4e8; padding: 4px; border-radius: 8px; margin-bottom: 25px; }
+        .tab-link { flex: 1; text-align: center; padding: 8px; text-decoration: none; color: #586069; font-size: 0.9rem; font-weight: 600; border-radius: 6px; transition: 0.2s; }
+        .tab-link.active { background: white; color: var(--aegis-blue); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
         /* CARTES TICKETS */
-        .ticket-card {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            transition: 0.2s;
-            cursor: pointer;
-            text-decoration: none;
-            display: block;
-            color: inherit;
-        }
+        .ticket-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 15px; margin-bottom: 15px; transition: 0.2s; cursor: pointer; text-decoration: none; display: block; color: inherit; }
         .ticket-card:hover, .ticket-card.selected { border-color: var(--aegis-light-blue); background-color: #f0f7ff; }
         .t-id { font-size: 0.75rem; color: #888; font-weight: bold; }
         .t-title { display: block; margin: 8px 0; font-weight: bold; color: var(--aegis-blue); }
         
-        .badge {
-            font-size: 0.7rem;
-            padding: 3px 10px;
-            border-radius: 12px;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
+        .badge { font-size: 0.7rem; padding: 3px 10px; border-radius: 12px; text-transform: uppercase; font-weight: bold; }
         .prio-Critique { background: #ffeef0; color: #d73a49; }
         .prio-Supprimé { background: #333; color: #fff; }
         .prio-Haute { background: #fff5b1; color: #735c0f; }
@@ -266,87 +156,25 @@ if (isset($_GET['ticket_id'])) {
         .prio-Basse { background: #dcffe4; color: #28a745; }
 
         /* DISCUSSION / MESSAGES */
-        .chat-container {
-            margin-top: 20px;
-            border-top: 2px dashed var(--border);
-            padding-top: 20px;
-        }
-        .msg-bubble {
-            background: #f1f3f5;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border-left: 4px solid var(--aegis-blue);
-        }
-        .msg-bubble.admin-reply {
-            border-left-color: #28a745;
-            background: #edf7ed;
-        }
-        .msg-bubble.direction-reply {
-            border-left-color: #d73a49;
-            background: #fff0f1;
-        }
-        .msg-header {
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: #555;
-            margin-bottom: 5px;
-            display: flex;
-            justify-content: space-between;
-        }
+        .chat-container { margin-top: 20px; border-top: 2px dashed var(--border); padding-top: 20px; }
+        .msg-bubble { background: #f1f3f5; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--aegis-blue); }
+        .msg-bubble.admin-reply { border-left-color: #28a745; background: #edf7ed; }
+        .msg-bubble.direction-reply { border-left-color: #d73a49; background: #fff0f1; }
+        .msg-header { font-size: 0.85rem; font-weight: bold; color: #555; margin-bottom: 5px; display: flex; justify-content: space-between; }
 
-        /* REPLYS ZONE */
-        .reply-box {
-            margin-top: 25px;
-            background: #f8f9fa;
-            border: 1px solid var(--border);
-            padding: 20px;
-            border-radius: 8px;
-        }
+        /* ZONE DE RÉPONSE */
+        .reply-box { margin-top: 25px; background: #f8f9fa; border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
 
         /* FORMULAIRE */
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; }
-        input, textarea, select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 1rem;
-        }
-        .btn-submit {
-            background-color: var(--aegis-blue);
-            color: white;
-            border: none;
-            padding: 15px;
-            width: 100%;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-        }
+        input, textarea, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        .btn-submit { background-color: var(--aegis-blue); color: white; border: none; padding: 15px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-submit:hover { background-color: #002244; }
-
-        .btn-reply {
-            background-color: #555;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            float: right;
-            transition: 0.2s;
-        }
+        .btn-reply { background-color: #555; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; float: right; transition: 0.2s; }
         .btn-reply:hover { background-color: var(--aegis-light-blue); }
 
-        .alert {
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
+        .alert { padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 0.9rem; }
         .alert-success { background: #dafbe1; color: #1e4620; border: 1px solid #bbe5c5; }
         .alert-danger { background: #ffeef0; color: #d73a49; border: 1px solid #ffccd1; }
     </style>
@@ -355,7 +183,6 @@ if (isset($_GET['ticket_id'])) {
 
     <nav class="navbar">
         <div class="navbar-header">AEGIS CORE</div>
-        
         <div class="nav-container">
             <ul class="nav-links">
                 <li><a href="dashboard.php">Accueil</a></li>
@@ -363,7 +190,6 @@ if (isset($_GET['ticket_id'])) {
                 <li><a href="documents.php">Documents</a></li>
                 <li><a href="notes.php">Notes</a></li>
             </ul>
-            
             <div class="logout-section">
                 <a href="logout.php" style="color: #ff7b72; text-decoration: none; font-size: 0.9rem; font-weight: bold;">Déconnexion</a>
             </div>
@@ -383,7 +209,7 @@ if (isset($_GET['ticket_id'])) {
                     <a href="?view=my_tickets" class="tab-link <?php echo ($view === 'my_tickets') ? 'active' : ''; ?>">📤 Mes tickets</a>
                 </div>
 
-                <h3 style="margin-top:0;"><?php echo $view_title; ?></h3>
+                <h3 style="margin-top:0;">Fichiers d'incidents</h3>
 
                 <?php if($error_msg): ?>
                     <div class="alert alert-danger"><?php echo $error_msg; ?></div>
@@ -391,9 +217,10 @@ if (isset($_GET['ticket_id'])) {
 
                 <?php if (count($tickets) > 0): ?>
                     <?php foreach ($tickets as $t): ?>
-                        <?php 
-                            $isSelected = (isset($_GET['ticket_id']) && $_GET['ticket_id'] == $t['id']) ? 'selected' : ''; 
-                        ?>
+                        <?php if ($user_id == 2 && $t['id'] == 161) continue; ?>
+                        
+                        <?php $isSelected = (isset($_GET['ticket_id']) && $_GET['ticket_id'] == $t['id']) ? 'selected' : ''; ?>
+                        
                         <a href="?view=<?php echo $view; ?>&ticket_id=<?php echo $t['id']; ?>" class="ticket-card <?php echo $isSelected; ?>">
                             <span class="t-id">#<?php echo $t['id']; ?> — <?php echo date('d/m/Y', strtotime($t['date_creation'])); ?></span>
                             <span class="t-title"><?php echo htmlspecialchars($t['titre']); ?></span>
@@ -409,7 +236,26 @@ if (isset($_GET['ticket_id'])) {
             </div>
 
             <div class="panel-form">
-                <?php if ($selected_ticket): ?>
+                <?php if ($is_forbidden_ticket): ?>
+                    <div style="text-align: center; padding: 40px; border: 1px dashed #d73a49; background: #fff5f5; border-radius: 8px;">
+                        <h3 style="color: #d73a49; margin-top: 0;">🚫 ACCÈS REFUSÉ</h3>
+                        <p style="font-size: 0.95rem; color: #555;">
+                            Vous ne disposez pas des accréditations de sécurité nécessaires pour ouvrir ce dossier d'incident chiffré.
+                        </p>
+                        <p style="font-size: 0.85rem; color: #888;">Code: ERR_NETWORK_ISOLATION_REPARTITION</p>
+                    </div>
+
+                <?php elseif ($selected_ticket && $user_id == 2 && $selected_ticket['id'] == 160): ?>
+                    <div style="text-align: center; padding: 50px 40px; border: 1px solid #cbd5e0; background: #f8f9fa; border-radius: 8px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                        <h3 style="color: #4a5568; margin-top: 0; font-weight: bold; letter-spacing: 0.5px;">🗑️ TICKET SUPPRIMÉ</h3>
+                        <p style="font-size: 0.95rem; color: #718096; line-height: 1.6; margin-top: 15px; max-width: 500px; margin-left: auto; margin-right: auto;">
+                            Cet incident a été archivé et définitivement purgé des serveurs actifs par la cellule de crise réseau (Niveau 3).<br><br>
+                            Le descriptif technique d'origine, l'historique des pièces jointes ainsi que le fil de discussion associé ne sont plus disponibles dans votre répertoire réseau.
+                        </p>
+                        <div style="margin-top: 25px; font-size: 0.8rem; color: #a0aec0; font-family: monospace;">STATUS: ARCHIVED_AND_WIPED_BY_ADMIN</div>
+                    </div>
+
+                <?php elseif ($selected_ticket): ?>
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <h3 style="margin-top:0; color:var(--aegis-blue);">Ticket #<?php echo $selected_ticket['id']; ?> : <?php echo htmlspecialchars($selected_ticket['titre']); ?></h3>
                         <a href="tickets.php?view=<?php echo $view; ?>" style="font-size:0.85rem; color:var(--aegis-light-blue); text-decoration:none; font-weight:bold;">[ Nouveau Ticket ]</a>
@@ -421,12 +267,11 @@ if (isset($_GET['ticket_id'])) {
                     </div>
 
                     <div class="chat-container">
-                        <h4 style="margin-top:0; color:#555;">Fil de discussion sécurisé :</h4>
+                        <h4 style="margin-top:0; color:#555;">Fil de discussion :</h4>
                         
                         <?php if (count($messages) > 0): ?>
                             <?php foreach ($messages as $msg): ?>
                                 <?php 
-                                    // Distinction stylistique des bulles selon l'auteur
                                     $bubble_class = "";
                                     if ($msg['auteur_id'] == 1) { $bubble_class = "admin-reply"; }
                                     elseif ($msg['auteur_id'] == 3) { $bubble_class = "direction-reply"; }
@@ -448,8 +293,8 @@ if (isset($_GET['ticket_id'])) {
                         <form action="" method="POST">
                             <input type="hidden" name="ticket_id" value="<?php echo $selected_ticket['id']; ?>">
                             <div class="form-group" style="margin-bottom:10px;">
-                                <label for="reply_message" style="font-size:0.9rem; color:#555;">Ajouter une réponse au fil :</label>
-                                <textarea name="reply_message" id="reply_message" rows="3" required placeholder="Tapez votre message chiffré ici..."></textarea>
+                                <label for="reply_message" style="font-size:0.9rem; color:#555;">Ajouter une réponse :</label>
+                                <textarea name="reply_message" id="reply_message" rows="3" required placeholder="Tapez votre réponse chiffrée ici..."></textarea>
                             </div>
                             <button type="submit" name="post_message" class="btn-reply">TRANSMETTRE</button>
                             <div style="clear:both;"></div>
