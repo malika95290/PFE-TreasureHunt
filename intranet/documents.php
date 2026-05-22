@@ -52,22 +52,13 @@ if (!$access_blocked) {
             $error_msg = "Erreur SQL rencontrée : " . $e->getMessage();
         }
     } else {
-        // Si pas de recherche, on charge le comportement par défaut de ton script
-        if ($user_id == 1) {
-            $stmt_docs = $pdo->query("SELECT d.id, d.titre, d.nom_fichier, d.date_depot, u.prenom, u.nom 
-                                      FROM documents d 
-                                      JOIN users u ON d.auteur_id = u.id 
-                                      ORDER BY d.date_depot DESC");
-            $documents = $stmt_docs->fetchAll();
-        } else {
-            $stmt_docs = $pdo->prepare("SELECT d.id, d.titre, d.nom_fichier, d.date_depot, u.prenom, u.nom 
-                                        FROM documents d 
-                                        JOIN users u ON d.auteur_id = u.id 
-                                        WHERE d.auteur_id = ? 
-                                        ORDER BY d.date_depot DESC");
-            $stmt_docs->execute([$user_id]);
-            $documents = $stmt_docs->fetchAll();
-        }
+        $stmt_docs = $pdo->prepare("SELECT d.id, d.titre, d.nom_fichier, d.date_depot, u.prenom, u.nom 
+                                    FROM documents d 
+                                    JOIN users u ON d.auteur_id = u.id 
+                                    WHERE d.auteur_id = ? 
+                                    ORDER BY d.date_depot DESC");
+        $stmt_docs->execute([$user_id]);
+        $documents = $stmt_docs->fetchAll();
     }
 }
 ?>
