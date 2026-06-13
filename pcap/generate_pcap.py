@@ -19,9 +19,10 @@ Responsables impliques :
 - Directeur Technique AEGIS
 - DSI AEGIS
  
-Clé de validation : FLAG{S1L3NT_W1R3_TL_2026}
+Cle de validation : FLAG{S1L3NT_W1R3_TL_2026}
  
-[INTERCEPTION SYSTEME HERMES - COMPTE: tlalimace - STATUT: QUARANTAINE DECLENCHEE]"""
+[INTERCEPTION SYSTEME HERMES - COMPTE: tlalimace - STATUT: QUARANTAINE DECLENCHEE]
+Soumettre le FLAG sur : http://192.168.56.10/agence-mission/submit.php"""
 
 # Configuration de la fausse requete HTTP
 http_payload = (
@@ -41,5 +42,5 @@ ack = TCP(sport=52410, dport=80, flags="A", seq=1001, ack=2001)
 data_pkt = ip/TCP(sport=52410, dport=80, flags="PA", seq=1001, ack=2001)/http_payload
 
 # Generation du fichier final
-wrpcap("hermes_dump_secure_extraction.pcap", [ip/syn, ip/syn_ack, ip/ack, data_pkt])
+wrpcap("ghot_evidence.pcap", [ip/syn, ip/syn_ack, ip/ack, data_pkt])
 print("Fichier PCAP de capture automatique Hermes genere avec succes et sans accents !")
