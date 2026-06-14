@@ -55,5 +55,5 @@ Pour se connecter à la machine Kali :
           → Réponse KH-RELAY-02 : accusé réception + clé validation
           → FLAG{S1L3NT_W1R3_TL_2026}
 
-ÉTAPE F   Soumission sur [http://192.168.56.10:8080](http://192.168.56.10/agence-mission/submit.php)
+ÉTAPE F   Soumission sur http://192.168.56.10/agence-mission/submit.php
 ```
