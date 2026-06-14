@@ -6,7 +6,7 @@ Pour se connecter à la machine Kali :
 ## Chaîne des indices — parcours complet
 
 ÉTAPE 0   Email DGSI reçu dans Thunderbird
-          → Photo jointe → steghide → identifiants tlalimace / Hermes2017!
+          → Photo jointe → steghide → identifiants tlalimace / Hermes2026!
 
 ÉTAPE 1   nmap -sV 192.168.56.10
           → Ports : 80, 22, 8080
@@ -14,7 +14,7 @@ Pour se connecter à la machine Kali :
 ÉTAPE 2   Site AEGIS port 80
           → Accès collaborateur -> Profil Thomas → lien vers /intranet/login.php
 
-ÉTAPE 3   Connexion intranet avec tlalimace / Hermes2017!
+ÉTAPE 3   Connexion intranet avec tlalimace / Hermes2026!
           → Onglet Tickets  : ticket #4523 supprimé → contacter admin
           → Onglet Documents : accès restreint → saisir code admin
 
@@ -31,13 +31,13 @@ Pour se connecter à la machine Kali :
 ÉTAPE 6   Retour dashboard Thomas — onglet Documents
           → Code AEGIS_SECURE_2026 → documents déverrouillés
           → Note_Vocale_Incident.wav → strings Note_Vocale_Incident.wav
-            "preuves dans la bdd hermes.surveillance" + nom du répertoire qui stocke le fichier "/var/log/network_captures/hermes"
+            "preuves dans la bdd hermes.surveille" + nom du répertoire qui stocke le fichier "/var/log/network_captures/hermes"
 
 ÉTAPE 7   SQLi — documents recherche panneau admin
           Récupérer le nom des colonnes de la table surveille :
-          → 'UNION SLECT 1, column_name,3,4,5,6 FROM information_schema.columns WHERE table_name='surveille'-- -
+          → ' UNION SELECT 1,column_name,3,4,5,6 FROM information_schema.columns WHERE table_name='surveille'-- -
           Récupérer le nom du fichier pcap
-          → 'UNION SELECT * FROM surveillance, nom_fichier_pcap, 3, 4, 5, 6 FROM hermes.surveille-- -
+          → ' UNION SELECT 1,localisation,nom_fichier_pcap,4,5,6 FROM hermes.surveille-- -
             capture     : ghost_evidence.pcap
 
 ÉTAPE 8   SSH — connexion avec mot de passe reconstitué
@@ -55,5 +55,5 @@ Pour se connecter à la machine Kali :
           → Réponse KH-RELAY-02 : accusé réception + clé validation
           → FLAG{S1L3NT_W1R3_TL_2026}
 
-ÉTAPE F   Soumission sur http://192.168.56.10:8080
+ÉTAPE F   Soumission sur [http://192.168.56.10:8080](http://192.168.56.10/agence-mission/submit.php)
 ```
